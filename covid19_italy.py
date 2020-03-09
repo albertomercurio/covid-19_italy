@@ -9,7 +9,8 @@ date = datetime.date.today()
 yesterday = datetime.date.today() - datetime.timedelta(days=1)
 bef_yesterday = datetime.date.today() - datetime.timedelta(days=2)
 
-url = "https://raw.githubusercontent.com/DavideMagno/ItalianCovidData/master/Daily_Covis19_Italian_Data_Cumulative.csv"
+#url = "https://raw.githubusercontent.com/DavideMagno/ItalianCovidData/master/Daily_Covis19_Italian_Data_Cumulative.csv"
+url = "https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/dati-andamento-nazionale/dpc-covid19-ita-andamento-nazionale.csv"
 os.system("wget -O data.csv "+url)
 
 data = []
@@ -27,14 +28,14 @@ with open('data.csv') as csv_file:
         if first_row:
             first_row = False
         else:
-            data.append(int(row[2])+int(row[4]))
+            data.append(int(row[6]))
 
 delta_t = 30
 delta_t2 = 10
-x = range(int(len(data)/21))
-x2 = range(int(len(data)/21)+delta_t)
-t = linspace(0,int(len(data)/21)+delta_t,100)
-data = [sum(data[i*21:i*21+21]) for i in x]
+x = range(len(data))
+x2 = range(len(data)+delta_t)
+t = linspace(0,len(data)+delta_t,100)
+#data = [sum(data[i*21:i*21+21]) for i in x]
 
 lower_1 = [2000,0.001,1]
 upper_1 = [10000,1,10]
@@ -46,15 +47,16 @@ p0_1 = [6000,0.2,3]
 p0_2 = [12000,0.2,7]
 p0_3 = [150000,0.2,40]
 p0 = [(lower_1[0]+upper_3[0])/2,(lower_1[1]+upper_3[1])/2,(lower_1[2]+upper_3[2])/2]
-print(p0)
 
-popt, pcov = curve_fit(sigmoid,x[:-2],data[:-2],p0=p0,bounds=(lower_1, upper_3),method='trf')
+popt, pcov = curve_fit(sigmoid,x[:-2],data[:-2],p0=p0,bounds=(lower_1, upper_3),method='trf',
+max_nfev=100000,xtol=1e-14,gtol=1e-14,ftol=1e-14,jac="3-point",tr_solver="exact",loss="soft_l1")
 max_infected1 = popt[0]
 error1 = sqrt(diag(pcov))[0]
 fitted1 = [sigmoid(i,*popt) for i in t]
 print(str(popt)+" +- "+str(error1))
 
-popt, pcov = curve_fit(sigmoid,x[:-1],data[:-1],p0=p0,bounds=(lower_1, upper_3),method='trf')
+popt, pcov = curve_fit(sigmoid,x[:-1],data[:-1],p0=p0,bounds=(lower_1, upper_3),method='trf',
+max_nfev=100000,xtol=1e-14,gtol=1e-14,ftol=1e-14,jac="3-point",tr_solver="exact",loss="soft_l1")
 max_infected2 = popt[0]
 error2 = sqrt(diag(pcov))[0]
 fitted2 = [sigmoid(i,*popt) for i in t]
@@ -66,7 +68,8 @@ error3 = sqrt(diag(pcov))[0]
 fitted3 = [sigmoid(i,*popt) for i in t]
 print(str(popt)+" +- "+str(error3))
 
-popt, pcov = curve_fit(exponential,x,data,p0=[400,0.2],bounds=([100,0], [1000,2]),method='trf')
+popt, pcov = curve_fit(exponential,x,data,p0=[400,0.2],bounds=([100,0], [1000,2]),method='trf',
+max_nfev=100000,xtol=1e-14,gtol=1e-14,ftol=1e-14,jac="3-point",tr_solver="exact",loss="soft_l1")
 print(popt)
 exp_fit = [exponential(i,*popt) for i in t]
 
