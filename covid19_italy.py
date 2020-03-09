@@ -45,20 +45,22 @@ upper_3 = [300000,1,40]
 p0_1 = [6000,0.2,3]
 p0_2 = [12000,0.2,7]
 p0_3 = [150000,0.2,40]
+p0 = [(lower_1[0]+upper_3[0])/2,(lower_1[1]+upper_3[1])/2,(lower_1[2]+upper_3[2])/2]
+print(p0)
 
-popt, pcov = curve_fit(sigmoid,x[:-2],data[:-2],p0=p0_1,bounds=(lower_1, upper_1),method='trf')
+popt, pcov = curve_fit(sigmoid,x[:-2],data[:-2],p0=p0,bounds=(lower_1, upper_3),method='trf')
 max_infected1 = popt[0]
 error1 = sqrt(diag(pcov))[0]
 fitted1 = [sigmoid(i,*popt) for i in t]
 print(str(popt)+" +- "+str(error1))
 
-popt, pcov = curve_fit(sigmoid,x[:-1],data[:-1],p0=p0_2,bounds=(lower_2, upper_2),method='trf')
+popt, pcov = curve_fit(sigmoid,x[:-1],data[:-1],p0=p0,bounds=(lower_1, upper_3),method='trf')
 max_infected2 = popt[0]
 error2 = sqrt(diag(pcov))[0]
 fitted2 = [sigmoid(i,*popt) for i in t]
 print(str(popt)+" +- "+str(error2))
 
-popt, pcov = curve_fit(sigmoid,x,data,p0=p0_3,bounds=(lower_3, upper_3),method='trf')
+popt, pcov = curve_fit(sigmoid,x,data,p0=p0,bounds=(lower_1, upper_3),method='trf')
 max_infected3 = popt[0]
 error3 = sqrt(diag(pcov))[0]
 fitted3 = [sigmoid(i,*popt) for i in t]
@@ -76,7 +78,7 @@ plt.scatter(x,data,marker="^",color="black",s=50,zorder=5)
 plt.xlim(0,x[-1]+delta_t2)
 plt.ylim(0,15000)
 plt.title(date)
-plt.xlabel("Tempo")
+plt.xlabel("Tempo (Giorni)")
 plt.ylabel("Persone Infette")
 plt.legend()
 plt.savefig("plot1.png",dpi=300,bbox_inches='tight')
@@ -91,7 +93,7 @@ plt.scatter(x,data,marker="^",color="black",s=40,zorder=4)
 plt.xlim(0,x[-1]+delta_t)
 plt.ylim(0,max(fitted3))
 plt.title(date)
-plt.xlabel("Tempo")
+plt.xlabel("Tempo (Giorni)")
 plt.ylabel("Persone Infette")
 plt.legend()
 plt.savefig("plot2.png",dpi=300,bbox_inches='tight')
