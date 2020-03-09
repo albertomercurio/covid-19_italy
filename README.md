@@ -2,8 +2,8 @@
 Analisi dati del COVID 19 in Italia
 
 
-Utilizzo i dati forniti dalla protezione civile, accuratamente collezionati da Davide Magno reperibili al link:
-https://github.com/DavideMagno/ItalianCovidData
+Utilizzo i dati forniti dalla protezione civile:
+https://github.com/pcm-dpc/COVID-19
 
 Il file covid19_italy.py è il programma che genera i due grafici: plot1 e plot2.
 
