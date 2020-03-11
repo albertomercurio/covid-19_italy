@@ -27,7 +27,7 @@ with open('data.csv') as csv_file:
         if first_row:
             first_row = False
         else:
-            infetti.append(int(row[6]))
+            infetti.append(int(row[10]))
 
 delta_t = 30
 delta_t2 = 10
@@ -48,14 +48,14 @@ p0 = [20000,(lower_1[1]+upper_3[1])/2,(lower_1[2]+upper_3[2])/2]
 print(p0)
 
 # popt, pcov = curve_fit(sigmoid,x[:-2],infetti[:-2],p0=p0,bounds=(lower_1, upper_3),method='trf',
-# max_nfev=50000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="linear")
+# max_nfev=50000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="huber")
 # max_infected1 = popt[0]
 # error1 = sqrt(diag(pcov))[0]
 # fitted1 = [sigmoid(i,*popt) for i in t]
 # print(str(popt)+" +- "+str(error1))
 #
 # popt, pcov = curve_fit(sigmoid,x[:-1],infetti[:-1],p0=p0,bounds=(lower_1, upper_3),method='trf',
-# max_nfev=50000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="linear")
+# max_nfev=50000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="huber")
 # max_infected2 = popt[0]
 # error2 = sqrt(diag(pcov))[0]
 # fitted2 = [sigmoid(i,*popt) for i in t]
@@ -66,9 +66,9 @@ max_nfev=50000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="huber")
 max_infected3 = popt[0]
 error3 = sqrt(diag(pcov))[0]
 fitted3 = [sigmoid(i,*popt) for i in t]
-print(str(popt)+" +- "+str(error3))
+print(str(popt)+" +- "+str(sqrt(diag(pcov))))
 
-popt, pcov = curve_fit(exponential,x,infetti,p0=[400,0.2],bounds=([100,0], [1000,2]),method='trf',
+popt, pcov = curve_fit(exponential,x,infetti,p0=[400,0.2],bounds=([100,0], [10000,2]),method='trf',
 max_nfev=50000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="huber")
 print(popt)
 exp_fit = [exponential(i,*popt) for i in t]
