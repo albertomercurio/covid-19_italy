@@ -10,6 +10,6 @@ Il file covid19_italy.py è il programma che genera quattro immagini grafici: "d
 La prima immagine, mostra il fit dei dati fino al giorno specificato.
 La seconda, mostra lo stesso grafico ma sul lungo periodo.
 La terza mostra i nuovi infetti al giorno, definita come la differenza tra gli infetti totali al giorno X meno gli infetti totali al giorno X-1.
-La quarta mostra il fattore di crescita, definito come il rapporto tra i nuovi infetti al giorno X e i nuovi infetti al giorno X-1.
+La quarta mostra il fattore di crescita, definito come il rapporto tra gli infetti al giorno X e gli infetti al giorno X-1.
 
 Il secondo grafico mostra il comportamento teorico dell'epidemia a distanze temporali maggiori.
