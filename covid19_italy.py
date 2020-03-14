@@ -64,7 +64,7 @@ print(p0)
 # print(str(popt)+" +- "+str(error2))
 
 popt, pcov = curve_fit(sigmoid,x,infetti,p0=p0,bounds=(lower_1,upper_3),method='trf',
-max_nfev=50000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="huber")
+max_nfev=100000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="huber")
 max_infected3 = popt[0]
 error3 = sqrt(diag(pcov))[0]
 fitted3 = [sigmoid(i,*popt) for i in t]
