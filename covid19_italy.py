@@ -15,6 +15,7 @@ url = "https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/dati-andamento-
 os.system("wget -O data.csv "+url)
 
 infetti = []
+perc_morti = []
 
 def sigmoid(x, a, b, c):
     return a/(1 + exp(-b*(x-c)))
@@ -28,8 +29,9 @@ with open('data.csv') as csv_file:
     for row in csv_reader:
         if first_row:
             first_row = False
-        else:
-            infetti.append(int(row[10]))
+        elif len(row) == 12:
+            infetti.append(int(row[-2]))
+            perc_morti.append(100*float(row[-3])/float(row[-2]))
 
 delta_t = 30
 delta_t2 = 10
@@ -128,6 +130,14 @@ plt.title(str(date)+" in Italia")
 plt.savefig("img_italia/growth_factor.png",dpi=200,bbox_inches='tight')
 plt.clf()
 
+plt.plot(x,perc_morti,lw=1,color="blue",linestyle="-.")
+plt.scatter(x,perc_morti,marker="^",color="black",s=40,zorder=4)
+plt.xlabel("Tempo (Giorni dal 26/02/2020)")
+plt.ylabel("Tasso di mortalità (%)")
+plt.title(str(date)+" in Italia")
+plt.savefig("img_italia/death_rate.png",dpi=200,bbox_inches='tight')
+plt.clf()
+
 ##################################################################
 ##################################################################
 ##################################################################
@@ -143,6 +153,8 @@ os.system("wget -O data.csv "+url)
 regioni = ["Abruzzo","Basilicata","P.A. Bolzano","Calabria","Campania","Emilia Romagna","Friuli Venezia Giulia",
 "Lazio","Liguria","Lombardia","Marche","Molise","Piemonte","Puglia","Sardegna","Sicilia","Toscana","P.A. Trento",
 "Umbria","Valle d'Aosta","Veneto"]
+hist = []
+
 if fit_regioni:
     for regione in regioni:
 
@@ -236,3 +248,13 @@ if fit_regioni:
         plt.title(str(date)+" in "+regione)
         plt.savefig(directory+"/""growth_factor.png",dpi=200,bbox_inches='tight')
         plt.clf()
+
+        hist.append(infetti[-1])
+
+for i in range(len(regioni)):
+    plt.bar(i,hist[i])
+plt.ylabel("Totale infetti")
+plt.xticks(range(len(regioni)),regioni,rotation="vertical")
+plt.title(str(date)+" in Italia")
+plt.savefig("img_italia/"+str(date)+"_regioni.png",dpi=200,bbox_inches='tight')
+plt.clf()
