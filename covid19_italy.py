@@ -72,10 +72,10 @@ error3 = sqrt(diag(pcov))[0]
 fitted3 = [sigmoid(i,*popt) for i in t]
 print(str(popt[0])+" +- "+str(error3))
 
-popt, pcov = curve_fit(exponential,x,infetti,p0=[400,0.2],bounds=([100,0], [10000,2]),method='trf',
+popt2, pcov2 = curve_fit(exponential,x,infetti,p0=[400,0.2],bounds=([100,0], [10000,2]),method='trf',
 max_nfev=50000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="huber")
-print(popt)
-exp_fit = [exponential(i,*popt) for i in t]
+print(popt2)
+exp_fit = [exponential(i,*popt2) for i in t]
 
 plt.plot(t,exp_fit,linestyle="-.",zorder=1,label="Epidemia inarrestabile")
 # plt.plot(t,fitted1,linestyle="--",lw=0.8,zorder=2,label=bef_yesterday)
@@ -108,14 +108,18 @@ plt.clf()
 ##################################################################
 
 variazione_infetti = diff(infetti)
+variazione_teorica = diff(fitted3)/(t[1]-t[0])
 
-plt.plot(x[:-1],variazione_infetti,lw=1,color="blue",linestyle="-.")
+plt.plot(x[:-1],variazione_infetti,lw=1,color="blue",linestyle="-.",zorder=1)
+plt.plot(t[:-1],variazione_teorica,color="red",zorder=2)
 plt.scatter(x[:-1],variazione_infetti,marker="^",color="black",s=40,zorder=4)
 plt.xlabel("Tempo (Giorni dal 25/02/2020)")
 plt.ylabel("Nuovi infetti")
+plt.xlim(0,t[-1])
 plt.title(str(date)+" in Italia")
 plt.savefig("img_italia/nuovi_infetti.png",dpi=200,bbox_inches='tight')
 plt.clf()
+
 
 # growth_factor = [variazione_infetti[i+1]/variazione_infetti[i] for i in range(len(variazione_infetti)-1)]
 growth_factor = [float(infetti[i+1])/(infetti[i]) for i in range(len(infetti)-1)]
@@ -137,6 +141,7 @@ plt.ylabel("Tasso di mortalità (%)")
 plt.title(str(date)+" in Italia")
 plt.savefig("img_italia/death_rate.png",dpi=200,bbox_inches='tight')
 plt.clf()
+
 
 ##################################################################
 ##################################################################
@@ -225,8 +230,10 @@ if fit_regioni:
         ##################################################################
 
         variazione_infetti = diff(infetti)
+        variazione_teorica = diff(fitted3)/(t[1]-t[0])
 
-        plt.plot(x[:-1],variazione_infetti,lw=1,color="blue",linestyle="-.")
+        plt.plot(x[:-1],variazione_infetti,lw=1,color="blue",linestyle="-.",zorder=1)
+        plt.plot(t[:-1],variazione_teorica,color="red",zorder=2)
         plt.scatter(x[:-1],variazione_infetti,marker="^",color="black",s=40,zorder=4)
         plt.xlabel("Tempo (Giorni dal 25/02/2020)")
         plt.ylabel("Nuovi infetti")
