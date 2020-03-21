@@ -39,16 +39,16 @@ x = range(len(infetti))
 x2 = range(len(infetti)+delta_t)
 t = linspace(0,len(infetti)+delta_t,100)
 
-lower_1 = [1000,0.01,0]
+lower_1 = [60000,0.01,0]
 # upper_1 = [10000,1,10]
 # lower_2 = [10000,0.001,7]
 # upper_2 = [15000,1,20]
 # lower_3 = [100000,0.001,20]
-upper_3 = [100000,1,100]
+upper_3 = [500000,1,100]
 # p0_1 = [6000,0.2,3]
 # p0_2 = [12000,0.2,7]
 # p0_3 = [150000,0.2,40]
-p0 = [20000,(lower_1[1]+upper_3[1])/2,(lower_1[2]+upper_3[2])/2]
+p0 = [130000,0.2,20]
 print(p0)
 
 # popt, pcov = curve_fit(sigmoid,x[:-2],infetti[:-2],p0=p0,bounds=(lower_1, upper_3),method='trf',
@@ -66,14 +66,14 @@ print(p0)
 # print(str(popt)+" +- "+str(error2))
 
 popt, pcov = curve_fit(sigmoid,x,infetti,p0=p0,bounds=(lower_1,upper_3),method='trf',
-max_nfev=100000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="huber")
+max_nfev=100000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="linear")
 max_infected3 = popt[0]
 error3 = sqrt(diag(pcov))[0]
 fitted3 = [sigmoid(i,*popt) for i in t]
-print(str(popt[0])+" +- "+str(error3))
+print(str(popt)+" +- "+str(error3))
 
 popt2, pcov2 = curve_fit(exponential,x,infetti,p0=[400,0.2],bounds=([100,0], [10000,2]),method='trf',
-max_nfev=50000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="huber")
+max_nfev=50000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="linear")
 print(popt2)
 exp_fit = [exponential(i,*popt2) for i in t]
 
@@ -200,7 +200,7 @@ if fit_regioni:
         print("############")
 
         popt, pcov = curve_fit(exponential,x,infetti,p0=[400,0.2],bounds=([0.001,0], [10000,2]),method='trf',
-        max_nfev=50000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="huber")
+        max_nfev=50000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="linear")
         exp_fit = [exponential(i,*popt) for i in t]
 
         plt.plot(t,exp_fit,linestyle="-.",zorder=1,label="Epidemia inarrestabile")
