@@ -1,8 +1,9 @@
 import os
 import csv
 import matplotlib.pyplot as plt
-from numpy import exp, linspace, sqrt, diag, diff, mean, sum
+from numpy import exp, linspace, arange, sqrt, diag, diff, mean, sum, ndarray, add, subtract
 from scipy.optimize import curve_fit
+from scipy.integrate import odeint
 import datetime
 import geopandas as gpd
 import pandas as pd
@@ -10,7 +11,8 @@ import pandas as pd
 fit_regioni = True #Mettere False se non si vuole eseguire il fit delle singole regioni
 plot_gompertz = False
 plot_richards = True
-plot_sigmoid = False
+plot_sigmoid = True
+plot_sir = True
 plot_map = True
 
 N = 60483973 #Popolazione italiana
@@ -26,6 +28,17 @@ infetti = []
 perc_morti = []
 morti = []
 
+#Lockdown
+def lkd(t,a1,a2,a3=15):
+    if t < a3:
+        return 1
+    else:
+        return (1 - a2)*exp(-(t-a3)/a1) + a2
+
+def deriv(u, t, a1, a2, b, g):
+    x, y, z = u
+    return [-lkd(t,a1,a2)*b*x*y, lkd(t,a1,a2)*b*x*y - g*y, g*y]
+
 def sigmoid(x, a, b, c):
     return a/(1 + exp(-b*(x-c)))
 
@@ -35,8 +48,40 @@ def exponential(x, a, b):
 def gompertz(x, a, b, c):
     return a*exp(-b*exp(-c*x))
 
-def richards(x, a, b, c, d=0.2, e = 229):
+def richards(x, a, b, c, d=0.2):
+    global e
     return a/((1 + ((a/e)**d - 1)*exp(-b*(x-c)))**(1.0/d))
+
+def sir(x, b, g, a1, a2):
+    global y0
+    dt = 0.001
+    if not isinstance(x, (list, tuple, ndarray,range)):
+        if x == 0:
+            x = 1e-20
+        t = arange(0, abs(x), dt)
+        if x < 0:
+            t = t[::-1]
+        sol = odeint(deriv, y0, t, args=(a1,a2,b,g))
+        # sol = odeint(deriv, y0, t, args=(b,g))
+        s = [i[0] for i in sol]
+        i = [i[1] for i in sol]
+        r = [i[2] for i in sol]
+        return i[-1]+r[-1]
+    else:
+        result = []
+        for it in x:
+            if it == 0:
+                it = 1e-20
+            t = arange(0, abs(it), dt)
+            if it < 0:
+                t = t[::-1]
+            sol = odeint(deriv, y0, t, args=(a1,a2,b,g))
+            # sol = odeint(deriv, y0, t, args=(b,g))
+            s = [i[0] for i in sol]
+            i = [i[1] for i in sol]
+            r = [i[2] for i in sol]
+            result.append(i[-1]+r[-1])
+        return result
 
 def r_sqrt(data,data_fitted):
     if len(data) == len(data_fitted):
@@ -81,7 +126,7 @@ if plot_sigmoid:
     print(p0)
 
     popt, pcov = curve_fit(sigmoid,x[0:],infetti[0:],p0=p0,bounds=(lower,upper),method='trf',
-    max_nfev=1000000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="linear",tr_solver="lsmr")
+    max_nfev=1000000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="linear")
     max_infected_sig = popt[0]
     error_sigmoid = sqrt(diag(pcov))[0]
     fitted_sig = [sigmoid(i,*popt) for i in t]
@@ -96,7 +141,7 @@ if plot_sigmoid:
     print(p0)
 
     popt, pcov = curve_fit(sigmoid,x[0:],morti[0:],p0=p0,bounds=(lower,upper),method='trf',
-    max_nfev=1000000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="linear",tr_solver="lsmr")
+    max_nfev=1000000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="linear")
     max_dead_sig = popt[0]
     error_sigmoid_dead = sqrt(diag(pcov))[0]
     fitted_sig_dead = [sigmoid(i,*popt) for i in t]
@@ -119,7 +164,7 @@ if plot_gompertz:
     print(p0)
 
     popt, pcov = curve_fit(gompertz,x[0:],infetti[0:],p0=p0,bounds=(lower,upper),method='trf',
-    max_nfev=1000000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="linear",tr_solver="lsmr")
+    max_nfev=1000000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="linear")
     max_infected_gom = popt[0]
     error_gompertz = sqrt(diag(pcov))[0]
     fitted_gom = [gompertz(i,*popt) for i in t]
@@ -134,7 +179,7 @@ if plot_gompertz:
     print(p0)
 
     popt, pcov = curve_fit(gompertz,x[0:],morti[0:],p0=p0,bounds=(lower,upper),method='trf',
-    max_nfev=1000000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="linear",tr_solver="lsmr")
+    max_nfev=1000000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="linear")
     max_dead_gom = popt[0]
     error_gompertz_dead = sqrt(diag(pcov))[0]
     fitted_gom_dead = [gompertz(i,*popt) for i in t]
@@ -152,8 +197,7 @@ if plot_richards:
 
     print("----INFETTI---- ")
 
-    def richards(x, a, b, c, d=0.2, e = infetti[0]):
-        return a/((1 + ((a/e)**d - 1)*exp(-b*(x-c)))**(1.0/d))
+    e = infetti[0]
 
     lower = [50000,0.01,-50,1e-20]
     upper = [1000000,1,0,5.0]
@@ -161,7 +205,7 @@ if plot_richards:
     print(p0)
 
     popt, pcov = curve_fit(richards,x[0:],infetti[0:],p0=p0,bounds=(lower,upper),method='trf',
-    max_nfev=1000000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="linear",tr_solver="lsmr")
+    max_nfev=1000000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="linear")
     max_infected_richards = popt[0]
     error_richards = sqrt(diag(pcov))[0]
     fitted_richards = [richards(i,*popt) for i in t]
@@ -171,8 +215,7 @@ if plot_richards:
 
     print("----DECEDUTI---- ")
 
-    def richards(x, a, b, c, d=0.2, e = morti[0]):
-        return a/((1 + ((a/e)**d - 1)*exp(-b*(x-c)))**(1.0/d))
+    e = morti[0]
 
     lower = [5000,0.01,-50,1e-20]
     upper = [100000,1,0,5.0]
@@ -180,13 +223,41 @@ if plot_richards:
     print(p0)
 
     popt, pcov = curve_fit(richards,x[0:],morti[0:],p0=p0,bounds=(lower,upper),method='trf',
-    max_nfev=1000000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="linear",tr_solver="lsmr")
+    max_nfev=1000000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="linear")
     max_dead_richards = popt[0]
     error_richards_dead = sqrt(diag(pcov))[0]
     fitted_richards_dead = [richards(i,*popt) for i in t]
     r2_richards_dead = r_sqrt(morti,[richards(i,*popt) for i in x])
     print(str(popt)+" +- "+str(int(error_richards_dead)))
     print("\n R^2 ="+str(r2_richards_dead)+"\n")
+
+###################################
+# sir
+###################################
+if plot_sir:
+    print("###################################")
+    print("SIR")
+    print("###################################")
+
+    print("----INFETTI---- ")
+
+    N = 60483973 #Popolazione italiana
+    y0 = [N-infetti[0],infetti[0],0]
+
+    lower = [0,0,1,0.05]
+    upper = [1,1,40,0.9]
+    p0 = [0.54/N,0.1,14.0,0.1]
+    print(p0)
+
+    popt, pcov = curve_fit(sir,x[0:],infetti[0:],p0=p0,bounds=(lower,upper),method='trf',
+    max_nfev=1000000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="linear")
+    fitted_sir = [sir(i,*popt) for i in t]
+    max_infected_sir = sir(200,*popt)
+    error_sir = max_infected_sir*mean([sqrt(diag(pcov))[i]/popt[i] for i in range(len(popt))])
+    # error_sir = max_infected_sir - (sir(200,*add(popt,sqrt(diag(pcov)))) + sir(200,*subtract(popt,sqrt(diag(pcov)))))/2
+    r2_sir = r_sqrt(infetti,[sir(i,*popt) for i in x])
+    print(str(popt)+" +- "+str(sqrt(diag(pcov))))
+    print("\n R^2 ="+str(r2_sir)+"\n")
 
 ###################################
 # exponential
@@ -196,7 +267,7 @@ print("Exponential")
 print("###################################")
 
 print("----INFETTI----")
-popt2, pcov2 = curve_fit(exponential,x[0:],infetti[0:],p0=[400,0.2],bounds=([100,0], [10000,2]),method='trf',
+popt2, pcov2 = curve_fit(exponential,x,infetti,p0=[400,0.2],bounds=([100,0], [10000,2]),method='trf',
 max_nfev=50000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="linear")
 print(popt2)
 exp_fit = [exponential(i,*popt2) for i in t]
@@ -204,7 +275,7 @@ r2_exp = r_sqrt(infetti,[exponential(i,*popt2) for i in x])
 print("\n R^2 ="+str(r2_exp)+"\n")
 
 print("----DECEDUTI----")
-popt2, pcov2 = curve_fit(exponential,x[0:],morti[0:],p0=[400,0.2],bounds=([10,0], [1000,2]),method='trf',
+popt2, pcov2 = curve_fit(exponential,x,morti,p0=[400,0.2],bounds=([10,0], [1000,2]),method='trf',
 max_nfev=50000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="linear")
 print(popt2)
 exp_fit_dead = [exponential(i,*popt2) for i in t]
@@ -214,9 +285,10 @@ print("\n R^2 ="+str(r2_exp_dead)+"\n")
 ##################################################################
 
 plt.plot(t,exp_fit,linestyle="-.",zorder=1,label="Epidemia inarrestabile ($R^2="+str(r2_exp)+")$")
-if plot_richards: plt.plot(t,fitted_richards,color="#FFCC00",zorder=4,label="Richards ($R^2="+str(r2_richards)+")$")
-if plot_gompertz: plt.plot(t,fitted_gom,color="#228B22",zorder=4,label="Gompertz ($R^2="+str(r2_gom)+")$")
-if plot_sigmoid: plt.plot(t,fitted_sig,color="red",zorder=4,label="Sigmoide ($R^2="+str(r2_sig)+")$")
+if plot_sir: plt.plot(t,fitted_sir,color="purple",zorder=4,label="S.I.R. Mod. ($R^2="+str(r2_sir)+")$")
+if plot_richards: plt.plot(t,fitted_richards,color="#FFCC00",zorder=3,label="Richards ($R^2="+str(r2_richards)+")$")
+if plot_gompertz: plt.plot(t,fitted_gom,color="#228B22",zorder=3,label="Gompertz ($R^2="+str(r2_gom)+")$")
+if plot_sigmoid: plt.plot(t,fitted_sig,color="red",zorder=3,label="Sigmoide ($R^2="+str(r2_sig)+")$")
 plt.scatter(x,infetti,marker="^",color="black",s=50,zorder=5)
 plt.xlim(0,x[-1]+delta_t2)
 plt.ylim(0,2.5*max(infetti))
@@ -228,9 +300,9 @@ plt.savefig("img_italia/"+str(date)+"_1.png",dpi=200,bbox_inches='tight')
 plt.clf()
 
 plt.plot(t,exp_fit_dead,linestyle="-.",zorder=1,label="Epidemia inarrestabile ($R^2="+str(r2_exp_dead)+")$")
-if plot_richards: plt.plot(t,fitted_richards_dead,color="#FFCC00",zorder=4,label="Richards ($R^2="+str(r2_richards_dead)+")$")
-if plot_gompertz: plt.plot(t,fitted_gom_dead,color="#228B22",zorder=4,label="Gompertz ($R^2="+str(r2_gom_dead)+")$")
-if plot_sigmoid: plt.plot(t,fitted_sig_dead,color="red",zorder=4,label="Sigmoide ($R^2="+str(r2_sig_dead)+")$")
+if plot_richards: plt.plot(t,fitted_richards_dead,color="#FFCC00",zorder=3,label="Richards ($R^2="+str(r2_richards_dead)+")$")
+if plot_gompertz: plt.plot(t,fitted_gom_dead,color="#228B22",zorder=3,label="Gompertz ($R^2="+str(r2_gom_dead)+")$")
+if plot_sigmoid: plt.plot(t,fitted_sig_dead,color="red",zorder=3,label="Sigmoide ($R^2="+str(r2_sig_dead)+")$")
 plt.scatter(x,morti,marker="^",color="black",s=50,zorder=5)
 plt.xlim(0,x[-1]+delta_t2)
 plt.ylim(0,2.5*max(morti))
@@ -244,6 +316,8 @@ plt.clf()
 ##################################################################
 
 plt.plot(t,exp_fit,linestyle="-.",zorder=1,label="$N_{MAX}=\infty$")
+if plot_sir: plt.plot(t,fitted_sir,zorder=3,color="purple",label="$N_{MAX}="+str(int(max_infected_sir))+
+"\pm"+str(round(error_sir/max_infected_sir*100,1))+"\%$")
 if plot_richards: plt.plot(t,fitted_richards,zorder=3,color="#FFCC00",label="$N_{MAX}="+str(int(max_infected_richards))+
 "\pm"+str(round(error_richards/max_infected_richards*100,1))+"\%$")
 if plot_gompertz: plt.plot(t,fitted_gom,zorder=3,color="#228B22",label="$N_{MAX}="+str(int(max_infected_gom))+
@@ -285,6 +359,7 @@ variazione_infetti = diff(infetti)
 if plot_sigmoid: variazione_teorica_sig = diff(fitted_sig)/(t[1]-t[0])
 if plot_gompertz: variazione_teorica_gom = diff(fitted_gom)/(t[1]-t[0])
 if plot_richards: variazione_teorica_richards = diff(fitted_richards)/(t[1]-t[0])
+if plot_sir: variazione_teorica_sir = diff(fitted_sir)/(t[1]-t[0])
 
 variazione_morti = diff(morti)
 if plot_sigmoid: variazione_teorica_sig_dead = diff(fitted_sig_dead)/(t[1]-t[0])
@@ -294,6 +369,7 @@ if plot_richards: variazione_teorica_richards_dead = diff(fitted_richards_dead)/
 ##################################################################
 
 plt.plot(x[:-1],variazione_infetti,lw=1,color="blue",linestyle="-.",zorder=1)
+if plot_sir: plt.plot(t[:-1],variazione_teorica_sir,color="purple",zorder=3)
 if plot_richards: plt.plot(t[:-1],variazione_teorica_richards,color="#FFCC00",zorder=2)
 if plot_gompertz: plt.plot(t[:-1],variazione_teorica_gom,color="#228B22",zorder=2)
 if plot_sigmoid: plt.plot(t[:-1],variazione_teorica_sig,color="red",zorder=2)
@@ -374,8 +450,11 @@ if fit_regioni:
     regioni = ["Abruzzo","Basilicata","P.A. Bolzano","Calabria","Campania","Emilia Romagna","Friuli Venezia Giulia",
     "Lazio","Liguria","Lombardia","Marche","Molise","Piemonte","Puglia","Sardegna","Sicilia","Toscana","P.A. Trento",
     "Umbria","Valle d'Aosta","Veneto"]
+    abitanti_regioni = [1315196,567118,106951,1956687,5826860,4452629,1215538,5896693,1556981,10036258,
+    1531753,308493,4375865,4048242,1648176,5026989,3736968,1070340,884640,126202,4905037]
     hist = []
     hist2 = []
+    it_ab = 0
 
     for regione in regioni:
 
@@ -422,38 +501,39 @@ if fit_regioni:
         ###################################
         if plot_sigmoid:
             print("----INFETTI----")
-            lower_1 = [10,0.01,1]
-            upper_3 = [max_infected,1.2,150]
+            lower = [10,0.01,1]
+            upper = [max_infected,1.2,150]
             p0 = [2000,0.5,20]
 
             if inizio_infetti != 0:
-                popt, pcov = curve_fit(sigmoid,x[inizio_infetti:],infetti[inizio_infetti:],p0=p0,bounds=(lower_1,upper_3),method='trf',
-                max_nfev=100000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="linear",tr_solver="lsmr")
+                popt, pcov = curve_fit(sigmoid,x[:-inizio_infetti],infetti[inizio_infetti:],p0=p0,bounds=(lower,upper),method='trf',
+                max_nfev=100000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="linear")
             else:
-                popt, pcov = curve_fit(sigmoid,x,infetti,p0=p0,bounds=(lower_1,upper_3),method='trf',
-                max_nfev=100000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="linear",tr_solver="lsmr")
+                popt, pcov = curve_fit(sigmoid,x,infetti,p0=p0,bounds=(lower,upper),method='trf',
+                max_nfev=100000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="linear")
+
             max_infected_sig = popt[0]
             error_sigmoid = sqrt(diag(pcov))[0]
-            fitted_sig = [sigmoid(i,*popt) for i in t]
-            r2_sig = r_sqrt(infetti,[sigmoid(i,*popt) for i in x])
+            fitted_sig = [sigmoid(i-inizio_infetti,*popt) for i in t]
+            r2_sig = r_sqrt(infetti,[sigmoid(i-inizio_infetti,*popt) for i in x])
             print(str(popt)+" +- "+str(int(error_sigmoid)))
             print("\n R^2 ="+str(r2_sig)+"\n")
 
             print("----DECEDUTI----")
-            lower_1 = [0,0.01,1]
-            upper_3 = [max_dead,10.0,150]
-            p0 = [200,0.5,20]
+            lower = [0,0.01,1]
+            upper = [max_dead,10.0,150]
+            p0 = [50,0.5,20]
 
             if inizio_morti != 0:
-                popt, pcov = curve_fit(richards,x[:-inizio_morti],morti[inizio_morti:],p0=p0,bounds=(lower,upper),method='trf',
-                max_nfev=1000000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="linear",tr_solver="lsmr")
+                popt, pcov = curve_fit(sigmoid,x[:-inizio_morti],morti[inizio_morti:],p0=p0,bounds=(lower,upper),method='trf',
+                max_nfev=1000000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="linear")
             else:
-                popt, pcov = curve_fit(richards,x,morti,p0=p0,bounds=(lower,upper),method='trf',
-                max_nfev=1000000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="linear",tr_solver="lsmr")
+                popt, pcov = curve_fit(sigmoid,x,morti,p0=p0,bounds=(lower,upper),method='trf',
+                max_nfev=1000000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="linear")
             max_dead_sig = popt[0]
             error_sigmoid_dead = sqrt(diag(pcov))[0]
-            fitted_sig_dead = [sigmoid(i,*popt) for i in t]
-            r2_sig_dead = r_sqrt(morti,[sigmoid(i,*popt) for i in x])
+            fitted_sig_dead = [sigmoid(i-inizio_morti,*popt) for i in t]
+            r2_sig_dead = r_sqrt(morti,[sigmoid(i-inizio_morti,*popt) for i in x])
             print(str(popt)+" +- "+str(int(error_sigmoid_dead)))
             print("\n R^2 ="+str(r2_sig_dead)+"\n")
 
@@ -467,15 +547,15 @@ if fit_regioni:
             p0 = [1000,5,0.1]
 
             if inizio_infetti != 0:
-                popt, pcov = curve_fit(gompertz,x[inizio_infetti:],infetti[inizio_infetti:],p0=p0,bounds=(lower,upper),method='trf',
-                max_nfev=200000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="linear",tr_solver="lsmr")
+                popt, pcov = curve_fit(gompertz,x[:-inizio_infetti],infetti[inizio_infetti:],p0=p0,bounds=(lower,upper),method='trf',
+                max_nfev=200000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="linear")
             else:
                 popt, pcov = curve_fit(gompertz,x,infetti,p0=p0,bounds=(lower,upper),method='trf',
-                max_nfev=200000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="linear",tr_solver="lsmr")
+                max_nfev=200000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="linear")
             max_infected_gom = popt[0]
             error_gompertz = sqrt(diag(pcov))[0]
-            fitted_gom = [gompertz(i,*popt) for i in t]
-            r2_gom = r_sqrt(infetti,[gompertz(i,*popt) for i in x])
+            fitted_gom = [gompertz(i-inizio_infetti,*popt) for i in t]
+            r2_gom = r_sqrt(infetti,[gompertz(i-inizio_infetti,*popt) for i in x])
             print(str(popt)+" +- "+str(int(error_gompertz)))
             print("\n R^2 ="+str(r2_gom)+"\n")
 
@@ -486,14 +566,14 @@ if fit_regioni:
 
             if inizio_morti != 0:
                 popt, pcov = curve_fit(gompertz,x[:-inizio_morti],morti[inizio_morti:],p0=p0,bounds=(lower,upper),method='trf',
-                max_nfev=1000000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="linear",tr_solver="lsmr")
+                max_nfev=1000000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="linear")
             else:
                 popt, pcov = curve_fit(gompertz,x,morti,p0=p0,bounds=(lower,upper),method='trf',
-                max_nfev=1000000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="linear",tr_solver="lsmr")
+                max_nfev=1000000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="linear")
             max_dead_gom = popt[0]
             error_gompertz_dead = sqrt(diag(pcov))[0]
-            fitted_gom_dead = [gompertz(i,*popt) for i in t]
-            r2_gom_dead = r_sqrt(morti,[gompertz(i,*popt) for i in x])
+            fitted_gom_dead = [gompertz(i-inizio_morti,*popt) for i in t]
+            r2_gom_dead = r_sqrt(morti,[gompertz(i-inizio_morti,*popt) for i in x])
             print(str(popt)+" +- "+str(int(error_gompertz_dead)))
             print("\n R^2 ="+str(r2_gom_dead)+"\n")
 
@@ -504,8 +584,7 @@ if fit_regioni:
 
             print("----INFETTI----")
 
-            def richards(x, a, b, c, d=0.2, e = infetti[inizio_infetti]):
-                return a/((1 + ((a/e)**d - 1)*exp(-b*(x-c)))**(1.0/d))
+            e = infetti[inizio_infetti]
 
             lower = [10,0.01,-40,1e-30]
             upper = [max_infected,3.0,20,5.0]
@@ -513,10 +592,10 @@ if fit_regioni:
 
             if inizio_infetti != 0:
                 popt, pcov = curve_fit(richards,x[:-inizio_infetti],infetti[inizio_infetti:],p0=p0,bounds=(lower,upper),method='trf',
-                max_nfev=1000000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="linear",tr_solver="lsmr")
+                max_nfev=1000000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="linear")
             else:
                 popt, pcov = curve_fit(richards,x,infetti,p0=p0,bounds=(lower,upper),method='trf',
-                max_nfev=1000000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="linear",tr_solver="lsmr")
+                max_nfev=1000000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="linear")
             max_infected_richards = popt[0]
             error_richards = sqrt(diag(pcov))[0]
             fitted_richards = [richards(i-inizio_infetti,*popt) for i in t]
@@ -526,8 +605,7 @@ if fit_regioni:
 
             print("----DECEDUTI----")
 
-            def richards(x, a, b, c, d=0.2, e = morti[inizio_morti]):
-                return a/((1 + ((a/e)**d - 1)*exp(-b*(x-c)))**(1.0/d))
+            e = morti[inizio_morti]
 
             lower = [0,0.01,-40,1e-30]
             upper = [max_dead,3.0,100,5.0]
@@ -535,10 +613,10 @@ if fit_regioni:
 
             if inizio_morti != 0:
                 popt, pcov = curve_fit(richards,x[:-inizio_morti],morti[inizio_morti:],p0=p0,bounds=(lower,upper),method='trf',
-                max_nfev=1000000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="linear",tr_solver="lsmr")
+                max_nfev=1000000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="linear")
             else:
                 popt, pcov = curve_fit(richards,x,morti,p0=p0,bounds=(lower,upper),method='trf',
-                max_nfev=1000000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="linear",tr_solver="lsmr")
+                max_nfev=1000000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="linear")
             max_dead_richards = popt[0]
             error_richards_dead = sqrt(diag(pcov))[0]
             fitted_richards_dead = [richards(i-inizio_morti,*popt) for i in t]
@@ -550,34 +628,63 @@ if fit_regioni:
             print("\n R^2 ="+str(r2_richards_dead)+"\n")
 
         ###################################
+        # sir
+        ###################################
+        if plot_sir:
+
+            print("----INFETTI----")
+
+            N = abitanti_regioni[it_ab]
+            y0 = [N-infetti[inizio_infetti],infetti[inizio_infetti],0]
+
+            lower = [0,0,0.5,0.05]
+            upper = [1,1,50,0.9]
+            p0 = [0.54/N,0.25,14,0.3]
+
+            if inizio_infetti != 0:
+                popt, pcov = curve_fit(sir,x[:-inizio_infetti],infetti[inizio_infetti:],p0=p0,bounds=(lower,upper),method='trf',
+                max_nfev=1000000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="linear")
+            else:
+                popt, pcov = curve_fit(sir,x,infetti,p0=p0,bounds=(lower,upper),method='trf',
+                max_nfev=1000000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="linear")
+            fitted_sir = [sir(i-inizio_infetti,*popt) for i in t]
+            max_infected_sir = sir(200,*popt)
+            error_sir = max_infected_sir*mean([sqrt(diag(pcov))[i]/popt[i] for i in range(len(popt))])
+            # error_sir = max_infected_sir - (sir(200,*add(popt,sqrt(diag(pcov)))) + sir(200,*subtract(popt,sqrt(diag(pcov)))))/2
+            r2_sir = r_sqrt(infetti,[sir(i-inizio_infetti,*popt) for i in x])
+            print(str(popt)+" +- "+str(sqrt(diag(pcov))))
+            print("\n R^2 ="+str(r2_sir)+"\n")
+
+        ###################################
         # exponential
         ###################################
 
         if inizio_infetti != 0:
-            popt, pcov = curve_fit(exponential,x[inizio_infetti:],infetti[inizio_infetti:],p0=[400,0.2],bounds=([0.001,0], [10000,2]),method='trf',
+            popt, pcov = curve_fit(exponential,x[:-inizio_infetti],infetti[inizio_infetti:],p0=[400,0.2],bounds=([0.001,0], [10000,2]),method='trf',
             max_nfev=50000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="linear")
         else:
             popt, pcov = curve_fit(exponential,x,infetti,p0=[400,0.2],bounds=([0.001,0], [10000,2]),method='trf',
             max_nfev=50000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="linear")
-        exp_fit = [exponential(i,*popt) for i in t]
-        r2_exp = r_sqrt(infetti,[exponential(i,*popt) for i in x])
+        exp_fit = [exponential(i-inizio_infetti,*popt) for i in t]
+        r2_exp = r_sqrt(infetti,[exponential(i-inizio_infetti,*popt) for i in x])
 
         if inizio_morti != 0:
-            popt, pcov = curve_fit(exponential,x[inizio_morti:],morti[inizio_morti:],p0=[400,0.2],bounds=([0.001,0], [10000,2]),method='trf',
+            popt, pcov = curve_fit(exponential,x[:-inizio_morti],morti[inizio_morti:],p0=[400,0.2],bounds=([0.001,0], [10000,2]),method='trf',
             max_nfev=50000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="linear")
         else:
             popt, pcov = curve_fit(exponential,x,morti,p0=[400,0.2],bounds=([0.001,0], [10000,2]),method='trf',
             max_nfev=50000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="linear")
-        exp_fit_dead = [exponential(i,*popt) for i in t]
-        r2_exp_dead = r_sqrt(morti,[exponential(i,*popt) for i in x])
+        exp_fit_dead = [exponential(i-inizio_morti,*popt) for i in t]
+        r2_exp_dead = r_sqrt(morti,[exponential(i-inizio_morti,*popt) for i in x])
         print("############")
 
         ################################################
 
         plt.plot(t,exp_fit,linestyle="-.",zorder=1,label="Epidemia inarrestabile ($R^2="+str(r2_exp)+")$")
-        if plot_richards: plt.plot(t,fitted_richards,color="#FFCC00",zorder=4,label="Richards ($R^2="+str(r2_richards)+")$")
-        if plot_gompertz: plt.plot(t,fitted_gom,color="#228B22",zorder=4,label="Gompertz ($R^2="+str(r2_gom)+")$")
-        if plot_sigmoid: plt.plot(t,fitted_sig,color="red",zorder=4,label="Sigmoide ($R^2="+str(r2_sig)+")$")
+        if plot_sir: plt.plot(t,fitted_sir,color="purple",zorder=4,label="S.I.R. Mod. ($R^2="+str(r2_sir)+")$")
+        if plot_richards: plt.plot(t,fitted_richards,color="#FFCC00",zorder=3,label="Richards ($R^2="+str(r2_richards)+")$")
+        if plot_gompertz: plt.plot(t,fitted_gom,color="#228B22",zorder=3,label="Gompertz ($R^2="+str(r2_gom)+")$")
+        if plot_sigmoid: plt.plot(t,fitted_sig,color="red",zorder=3,label="Sigmoide ($R^2="+str(r2_sig)+")$")
         plt.scatter(x,infetti,marker="^",color="black",s=50,zorder=5)
         plt.xlim(0,x[-1]+delta_t2)
         plt.ylim(0,2.5*max(infetti))
@@ -589,9 +696,9 @@ if fit_regioni:
         plt.clf()
 
         plt.plot(t,exp_fit_dead,linestyle="-.",zorder=1,label="Epidemia inarrestabile ($R^2="+str(r2_exp_dead)+")$")
-        if plot_richards: plt.plot(t,fitted_richards_dead,color="#FFCC00",zorder=4,label="Richards ($R^2="+str(r2_richards_dead)+")$")
-        if plot_gompertz: plt.plot(t,fitted_gom_dead,color="#228B22",zorder=4,label="Gompertz ($R^2="+str(r2_gom_dead)+")$")
-        if plot_sigmoid: plt.plot(t,fitted_sig_dead,color="red",zorder=4,label="Sigmoide ($R^2="+str(r2_sig_dead)+")$")
+        if plot_richards: plt.plot(t,fitted_richards_dead,color="#FFCC00",zorder=3,label="Richards ($R^2="+str(r2_richards_dead)+")$")
+        if plot_gompertz: plt.plot(t,fitted_gom_dead,color="#228B22",zorder=3,label="Gompertz ($R^2="+str(r2_gom_dead)+")$")
+        if plot_sigmoid: plt.plot(t,fitted_sig_dead,color="red",zorder=3,label="Sigmoide ($R^2="+str(r2_sig_dead)+")$")
         plt.scatter(x,morti,marker="^",color="black",s=50,zorder=5)
         plt.xlim(0,x[-1]+delta_t2)
         plt.ylim(0,2.5*max(morti))
@@ -605,6 +712,8 @@ if fit_regioni:
         ##################################################################
 
         plt.plot(t,exp_fit,linestyle="-.",zorder=1,label="$N_{MAX}=\infty$")
+        if plot_sir: plt.plot(t,fitted_sir,zorder=3,color="purple",label="$N_{MAX}="+str(int(max_infected_sir))+
+            "\pm "+str(round(error_sir/max_infected_sir*100,1))+"\%$")
         if plot_richards: plt.plot(t,fitted_richards,zorder=3,color="#FFCC00",label="$N_{MAX}="+str(int(max_infected_richards))+
             "\pm "+str(round(error_richards/max_infected_richards*100,1))+"\%$")
         if plot_gompertz: plt.plot(t,fitted_gom,zorder=3,color="#228B22",label="$N_{MAX}="+str(int(max_infected_gom))+
@@ -646,6 +755,7 @@ if fit_regioni:
         if plot_sigmoid: variazione_teorica_sig = diff(fitted_sig)/(t[1]-t[0])
         if plot_gompertz: variazione_teorica_gom = diff(fitted_gom)/(t[1]-t[0])
         if plot_richards: variazione_teorica_richards = diff(fitted_richards)/(t[1]-t[0])
+        if plot_sir: variazione_teorica_sir = diff(fitted_sir)/(t[1]-t[0])
 
         variazione_morti = diff(morti)
         if plot_sigmoid: variazione_teorica_sig_dead = diff(fitted_sig_dead)/(t[1]-t[0])
@@ -655,6 +765,7 @@ if fit_regioni:
         ##################################################################
 
         plt.plot(x[:-1],variazione_infetti,lw=1,color="blue",linestyle="-.",zorder=1)
+        if plot_sir: plt.plot(t[:-1],variazione_teorica_sir,color="purple",zorder=3)
         if plot_richards: plt.plot(t[:-1],variazione_teorica_richards,color="#FFCC00",zorder=2)
         if plot_gompertz: plt.plot(t[:-1],variazione_teorica_gom,color="#228B22",zorder=2)
         if plot_sigmoid: plt.plot(t[:-1],variazione_teorica_sig,color="red",zorder=2)
@@ -747,6 +858,8 @@ if fit_regioni:
         plt.axis('off')
         plt.savefig(directory+"/"+str(date)+"_map.png",dpi=300,bbox_inches='tight')
         plt.clf()
+
+        it_ab += 1
 
     for i in range(len(regioni)):
         plt.bar(i,hist[i])
