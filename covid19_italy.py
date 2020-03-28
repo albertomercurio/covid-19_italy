@@ -11,7 +11,7 @@ import pandas as pd
 fit_regioni = True #Mettere False se non si vuole eseguire il fit delle singole regioni
 plot_gompertz = False
 plot_richards = True
-plot_sigmoid = True
+plot_sigmoid = False
 plot_sir = True
 plot_map = True
 
@@ -46,7 +46,7 @@ def exponential(x, a, b):
     return a*exp(b*x)
 
 def gompertz(x, a, b, c):
-    return a*exp(-b*exp(-c*x))
+    return a*exp(-exp(b-c*x))
 
 def richards(x, a, b, c, d=0.2):
     global e
@@ -160,7 +160,7 @@ if plot_gompertz:
     print("----INFETTI----")
     lower = [80000,1.1,0.01]
     upper = [1000000,20,2.0]
-    p0 = [500000,5,0.1]
+    p0 = [500000,2.68,0.1]
     print(p0)
 
     popt, pcov = curve_fit(gompertz,x[0:],infetti[0:],p0=p0,bounds=(lower,upper),method='trf',
@@ -544,7 +544,7 @@ if fit_regioni:
             print("----INFETTI----")
             lower = [10,0.005,0.005]
             upper = [max_infected,50,0.5]
-            p0 = [1000,5,0.1]
+            p0 = [1000,2.68,0.1]
 
             if inizio_infetti != 0:
                 popt, pcov = curve_fit(gompertz,x[:-inizio_infetti],infetti[inizio_infetti:],p0=p0,bounds=(lower,upper),method='trf',
