@@ -246,7 +246,7 @@ if plot_sir:
 
     lower = [0,0,1,0.05]
     upper = [1,1,40,0.9]
-    p0 = [0.54/N,0.1,14.0,0.1]
+    p0 = [0.5/N,0.15,16.0,0.1]
     print(p0)
 
     popt, pcov = curve_fit(sir,x[0:],infetti[0:],p0=p0,bounds=(lower,upper),method='trf',
@@ -267,7 +267,7 @@ print("Exponential")
 print("###################################")
 
 print("----INFETTI----")
-popt2, pcov2 = curve_fit(exponential,x,infetti,p0=[400,0.2],bounds=([100,0], [10000,2]),method='trf',
+popt2, pcov2 = curve_fit(exponential,x[:25],infetti[:25],p0=[400,0.2],bounds=([100,0], [10000,2]),method='trf',
 max_nfev=50000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="linear")
 print(popt2)
 exp_fit = [exponential(i,*popt2) for i in t]
@@ -327,7 +327,7 @@ if plot_sigmoid: plt.plot(t,fitted_sig,zorder=3,color="red",label="$N_{MAX}="+st
 plt.scatter(x,infetti,marker="^",color="black",s=40,zorder=4)
 plt.xlim(0,x[-1]+delta_t)
 # plt.ylim(0,max(max(fitted_sig),max(fitted_gom)))
-plt.ylim(0,4*max(infetti))
+plt.ylim(0,2.5*max(infetti))
 plt.title(str(date)+" in Italia")
 plt.xlabel("Tempo (Giorni dal 24/02/2020)")
 plt.ylabel("Persone infette")
@@ -345,7 +345,7 @@ if plot_sigmoid: plt.plot(t,fitted_sig_dead,zorder=3,color="red",label="$N_{MAX}
 plt.scatter(x,morti,marker="^",color="black",s=40,zorder=4)
 plt.xlim(0,x[-1]+delta_t)
 # plt.ylim(0,max(max(fitted_sig_dead),max(fitted_gom_dead)))
-plt.ylim(0,4*max(morti))
+plt.ylim(0,2.5*max(morti))
 plt.title(str(date)+" in Italia")
 plt.xlabel("Tempo (Giorni dal 24/02/2020)")
 plt.ylabel("Persone decedute")
@@ -447,8 +447,8 @@ if fit_regioni:
     url = "https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/dati-regioni/dpc-covid19-ita-regioni.csv"
     os.system("wget -O data_regioni.csv "+url)
 
-    regioni = ["Abruzzo","Basilicata","P.A. Bolzano","Calabria","Campania","Emilia Romagna","Friuli Venezia Giulia",
-    "Lazio","Liguria","Lombardia","Marche","Molise","Piemonte","Puglia","Sardegna","Sicilia","Toscana","P.A. Trento",
+    regioni = ["Sicilia","Abruzzo","Basilicata","P.A. Bolzano","Calabria","Campania","Emilia Romagna","Friuli Venezia Giulia",
+    "Lazio","Liguria","Lombardia","Marche","Molise","Piemonte","Puglia","Sardegna","Toscana","P.A. Trento",
     "Umbria","Valle d'Aosta","Veneto"]
     abitanti_regioni = [1315196,567118,106951,1956687,5826860,4452629,1215538,5896693,1556981,10036258,
     1531753,308493,4375865,4048242,1648176,5026989,3736968,1070340,884640,126202,4905037]
@@ -639,7 +639,7 @@ if fit_regioni:
 
             lower = [0,0,0.5,0.05]
             upper = [1,1,50,0.9]
-            p0 = [0.54/N,0.25,14,0.3]
+            p0 = [8.0/N,0.25,14,0.3]
 
             if inizio_infetti != 0:
                 popt, pcov = curve_fit(sir,x[:-inizio_infetti],infetti[inizio_infetti:],p0=p0,bounds=(lower,upper),method='trf',
@@ -723,7 +723,7 @@ if fit_regioni:
         plt.scatter(x,infetti,marker="^",color="black",s=40,zorder=4)
         plt.xlim(0,x[-1]+delta_t)
         # plt.ylim(0,max(max(fitted_sig),max(fitted_gom)))
-        plt.ylim(0,4*max(infetti))
+        plt.ylim(0,2.5*max(infetti))
         plt.title(str(date)+" in "+regione)
         plt.xlabel("Tempo (Giorni dal 24/02/2020)")
         plt.ylabel("Persone infette")
@@ -741,7 +741,7 @@ if fit_regioni:
         plt.scatter(x,morti,marker="^",color="black",s=40,zorder=4)
         plt.xlim(0,x[-1]+delta_t)
         # plt.ylim(0,max(max(fitted_sig_dead),max(fitted_gom_dead)))
-        plt.ylim(0,4*max(morti))
+        plt.ylim(0,2.5*max(morti))
         plt.title(str(date)+" in "+regione)
         plt.xlabel("Tempo (Giorni dal 24/02/2020)")
         plt.ylabel("Persone decedute")
