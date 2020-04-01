@@ -100,7 +100,7 @@ with open('data.csv') as csv_file:
     for row in csv_reader:
         if first_row:
             first_row = False
-        elif len(row) == 14:
+        elif len(row) == 15:
             infetti.append(int(row[-4]))
             perc_morti.append(100*float(row[-5])/float(row[-4]))
             morti.append(int(row[-5]))
@@ -244,9 +244,9 @@ if plot_sir:
     N = 60483973 #Popolazione italiana
     y0 = [N-infetti[0],infetti[0],0]
 
-    lower = [0,0,1,0.05]
-    upper = [1,1,40,0.9]
-    p0 = [0.5/N,0.15,16.0,0.1]
+    lower = [0,0,1,0.001]
+    upper = [10,1,100,0.9]
+    p0 = [0.5/N,0.15,20.0,0.1]
     print(p0)
 
     popt, pcov = curve_fit(sir,x[0:],infetti[0:],p0=p0,bounds=(lower,upper),method='trf',
@@ -450,8 +450,8 @@ if fit_regioni:
     regioni = ["Sicilia","Abruzzo","Basilicata","P.A. Bolzano","Calabria","Campania","Emilia Romagna","Friuli Venezia Giulia",
     "Lazio","Liguria","Lombardia","Marche","Molise","Piemonte","Puglia","Sardegna","Toscana","P.A. Trento",
     "Umbria","Valle d'Aosta","Veneto"]
-    abitanti_regioni = [1315196,567118,106951,1956687,5826860,4452629,1215538,5896693,1556981,10036258,
-    1531753,308493,4375865,4048242,1648176,5026989,3736968,1070340,884640,126202,4905037]
+    abitanti_regioni = [5026989,1315196,567118,106951,1956687,5826860,4452629,1215538,5896693,1556981,10036258,
+    1531753,308493,4375865,4048242,1648176,3736968,1070340,884640,126202,4905037]
     hist = []
     hist2 = []
     it_ab = 0
@@ -471,7 +471,7 @@ if fit_regioni:
             for row in csv_reader:
                 if first_row:
                     first_row = False
-                elif row[3] == regione:
+                elif row[3].replace("-"," ") == regione:
                     infetti.append(int(row[-4]))
                     morti.append(int(row[-5]))
 
@@ -630,6 +630,7 @@ if fit_regioni:
         ###################################
         # sir
         ###################################
+        plot_sir = False
         if plot_sir:
 
             print("----INFETTI----")
@@ -637,9 +638,9 @@ if fit_regioni:
             N = abitanti_regioni[it_ab]
             y0 = [N-infetti[inizio_infetti],infetti[inizio_infetti],0]
 
-            lower = [0,0,0.5,0.05]
-            upper = [1,1,50,0.9]
-            p0 = [8.0/N,0.25,14,0.3]
+            lower = [0,0,10,1e-20]
+            upper = [100,1,100,0.9]
+            p0 = [50.0/N,0.15,40,0.1]
 
             if inizio_infetti != 0:
                 popt, pcov = curve_fit(sir,x[:-inizio_infetti],infetti[inizio_infetti:],p0=p0,bounds=(lower,upper),method='trf',
@@ -834,7 +835,7 @@ if fit_regioni:
         url = "https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/dati-province/dpc-covid19-ita-province-latest.csv"
         df = pd.read_csv(url,skiprows=1,names=["data","stato","codice_regione",
         "denominazione_regione","codice_provincia","denominazione_provincia","sigla_provincia","lat","long","totale_casi","note_it","note_en"])
-        df = df.replace("P.A. Bolzano","P.A. Trento")
+        df = df.replace("P.A. Bolzano","P.A. Trento").replace("Emilia-Romagna","Emilia Romagna")
         df = df[df["denominazione_regione"] == regione]
         df = df[df["denominazione_provincia"] != "In fase di definizione/aggiornamento"]
 
@@ -880,8 +881,9 @@ if fit_regioni:
 if plot_map:
     url = "https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/dati-regioni/dpc-covid19-ita-regioni-latest.csv"
     df = pd.read_csv(url,skiprows=1,names=["data","stato","codice_regione",
-    "denominazione_regione","lat","long","ricoverati_con_sintomi","terapia_intensiva",
-    "totale_ospedalizzati","isolamento_domiciliare","totale_attualmente_positivi","nuovi_attualmente_positivi",
+    "denominazione_regione","lat","long","ricoverati_con_sintomi",
+    "terapia_intensiva","totale_ospedalizzati","isolamento_domiciliare",
+    "totale_positivi","variazione_totale_positivi","nuovi_positivi",
     "dimessi_guariti","deceduti","totale_casi","tamponi","note_it","note_en"])
 
     df.at[17, "totale_casi"] += df["totale_casi"][2]
