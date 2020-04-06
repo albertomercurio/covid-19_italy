@@ -201,7 +201,7 @@ if plot_richards:
 
     lower = [50000,0.01,-50,1e-20]
     upper = [1000000,1,0,5.0]
-    p0 = [130000,0.1,-1,1.5]
+    p0 = [130000,0.2,-1,1.5]
     print(p0)
 
     popt, pcov = curve_fit(richards,x[0:],infetti[0:],p0=p0,bounds=(lower,upper),method='trf',
