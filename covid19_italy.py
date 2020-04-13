@@ -246,7 +246,7 @@ if plot_sir:
 
     lower = [0,0,1,0.001]
     upper = [10,1,100,0.9]
-    p0 = [0.5/N,0.15,20.0,0.1]
+    p0 = [0.5/N,0.18,20.0,0.3]
     print(p0)
 
     popt, pcov = curve_fit(sir,x[0:],infetti[0:],p0=p0,bounds=(lower,upper),method='trf',
