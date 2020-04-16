@@ -660,12 +660,8 @@ if fit_regioni:
         # exponential
         ###################################
 
-        if inizio_infetti != 0:
-            popt, pcov = curve_fit(exponential,x[:-inizio_infetti],infetti[inizio_infetti:],p0=[400,0.2],bounds=([0.001,0], [10000,2]),method='trf',
-            max_nfev=50000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="linear")
-        else:
-            popt, pcov = curve_fit(exponential,x,infetti,p0=[400,0.2],bounds=([0.001,0], [10000,2]),method='trf',
-            max_nfev=50000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="linear")
+        popt, pcov = curve_fit(exponential,x[:20],infetti[:20],p0=[400,0.2],bounds=([0.001,0], [10000,2]),method='trf',
+        max_nfev=50000,xtol=1e-15,gtol=1e-15,ftol=1e-15,jac="3-point",loss="linear")
         exp_fit = [exponential(i-inizio_infetti,*popt) for i in t]
         r2_exp = r_sqrt(infetti,[exponential(i-inizio_infetti,*popt) for i in x])
 
