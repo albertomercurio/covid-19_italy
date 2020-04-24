@@ -36,8 +36,9 @@ def lkd(t,a1,a2,a3=15):
         return (1 - a2)*exp(-(t-a3)/a1) + a2
 
 def deriv(u, t, a1, a2, b, g):
+    global N
     x, y, z = u
-    return [-lkd(t,a1,a2)*b*x*y, lkd(t,a1,a2)*b*x*y - g*y, g*y]
+    return [-lkd(t,a1,a2)*b*x*y/N, lkd(t,a1,a2)*b*x*y/N - g*y, g*y]
 
 def sigmoid(x, a, b, c):
     return a/(1 + exp(-b*(x-c)))
@@ -100,10 +101,10 @@ with open('data.csv') as csv_file:
     for row in csv_reader:
         if first_row:
             first_row = False
-        elif len(row) == 15:
-            infetti.append(int(row[-4]))
+        elif len(row) == 16:
+            infetti.append(int(row[-5]))
             perc_morti.append(100*float(row[-5])/float(row[-4]))
-            morti.append(int(row[-5]))
+            morti.append(int(row[-6]))
 
 delta_t = 30
 delta_t2 = 10
@@ -245,8 +246,8 @@ if plot_sir:
     y0 = [N-infetti[0],infetti[0],0]
 
     lower = [0,0,1,0.001]
-    upper = [10,1,100,0.9]
-    p0 = [0.5/N,0.18,20.0,0.3]
+    upper = [0.99,0.9,100,0.9]
+    p0 = [0.4,0.1,25.0,0.2]
     print(p0)
 
     popt, pcov = curve_fit(sir,x[0:],infetti[0:],p0=p0,bounds=(lower,upper),method='trf',
@@ -472,8 +473,8 @@ if fit_regioni:
                 if first_row:
                     first_row = False
                 elif row[3].replace("-"," ") == regione:
-                    infetti.append(int(row[-4]))
-                    morti.append(int(row[-5]))
+                    infetti.append(int(row[-5]))
+                    morti.append(int(row[-6]))
 
         print("//////////////// "+regione+" ////////////////")
 
@@ -876,11 +877,9 @@ if fit_regioni:
 
 if plot_map:
     url = "https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/dati-regioni/dpc-covid19-ita-regioni-latest.csv"
-    df = pd.read_csv(url,skiprows=1,names=["data","stato","codice_regione",
-    "denominazione_regione","lat","long","ricoverati_con_sintomi",
-    "terapia_intensiva","totale_ospedalizzati","isolamento_domiciliare",
-    "totale_positivi","variazione_totale_positivi","nuovi_positivi",
-    "dimessi_guariti","deceduti","totale_casi","tamponi","note_it","note_en"])
+    df = pd.read_csv(url,skiprows=1,names=["data","stato","codice_regione","denominazione_regione",
+"lat","long","ricoverati_con_sintomi","terapia_intensiva","totale_ospedalizzati","isolamento_domiciliare","totale_positivi",
+"variazione_totale_positivi","nuovi_positivi","dimessi_guariti","deceduti","totale_casi","tamponi","casi_testati","note_it","note_en"])
 
     df.at[17, "totale_casi"] += df["totale_casi"][2]
     df = df.drop(df.index[2])
